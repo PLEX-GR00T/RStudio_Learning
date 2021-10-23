@@ -1,0 +1,99 @@
+---
+title: "[R] EDA"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE) 
+```
+
+## Basic Library 
+Just to get started with the [R]EDA assignment, We are going to include the Basic Libraries we required for it. Which is "tidyverse" in our case.
+```{r Library} 
+library(tidyverse) 
+```
+
+## Dataset Storms
+Now, We have used the dataset named "Storms" which comes under the package of "dplyr". Now, only the data sets are in the package of "dataset" are not converted into the tibble form, but other than that all the datasets are already in the tibble form, just like my "storms". So, lets add the dataset in one variable, even though we can use it without assigning it to same variable, we should have good practice for it, in case we want to change the variable name. 
+
+And the dataset has 10010 observations in the 13 different Variables.
+```{r Storms dataset}
+storms <- storms
+```
+
+## Questions.
+Here are some of the questions, that we are going to get answers form the dataset storms, and visualize them.
+1. Are storms getting more frequent by the year?
+2. Are storms getting stronger by the year? 
+3. What months see the most number of storms?
+
+## Info of Missing values.
+Now, here I performing the checks to determine the quality of my "storms" data.
+```{r Missing Values}
+storms %>% summarise(Total_Count = n())
+filter(storms, is.na(ts_diameter) | is.na(hu_diameter)) %>%
+  summarise(Missing_Count = n())
+```
+As you can see only 3482 rows have the ts_diameter and hu_diameter records, other 6528 rows have that column value missing, thus those variables might not be of much use when we have to find something or have to make conclusion depending on columns data.
+
+## Answer 1
+
+```{r Answer1}
+(storm_freq <- group_by(storms, Year = year) %>%
+  distinct(name) %>%
+  summarise(No_of_Storms = n()))
+ggplot(data = storm_freq) +
+  geom_col(mapping = aes(x = Year, y = No_of_Storms))
+```
+
+Conclusion 1: Yes, the Storms are getting more frequent by the year.
+
+The above trend does show increase in the number of storms per year. As normal observer we can see that this data is distributed from 1975 to 2015, as shown in the graph by the X axis, and on the y axis we have No_of_Storms, which seems rising up as we move along X axis bar.
+
+## Answer 2
+
+```{r Answer2}
+(storm_cat <- filter(storms, category > 2) %>% group_by(Year = year))
+ggplot(data = storm_cat) +
+  geom_bar(mapping = aes(x = Year, fill = category), position = "dodge")
+```
+Above graph does show higher number of category 3 and above storms per year.
+And yes storms are getting stronger by the year, from given data set you can see that by watching high frequency of higher category number increasing as we move to recent years.
+
+```{r Answer2b}
+(storm_wind <- storms %>%
+  group_by(Year = year) %>%
+  summarise(
+    Max_Wind_Speed = max(wind),
+    Min_Pressure = min(pressure)
+  )
+)
+ggplot(data = storm_wind) + 
+  geom_col(mapping = aes(x = Year, y = Max_Wind_Speed))
+ggplot(data = storm_wind) + 
+  geom_col(mapping = aes(x = Year, y = Min_Pressure))
+```
+Conclusion 2: From the above 3 graphs, the numbers of stronger storms are increasing, but the storms themselves cannot be conclusively said to be getting stronger. 
+
+This dataset is from NHC (national Hurricane Center) which is the part of the National Oceanic Atmospheric Administration (NOAA), that says that Category on the dataset which is Saffir-Simpson storm category which is estimated from wind speed, in our dataset it is from (-1 to 5), so more the number stronger the stronger the wind speed.
+
+## Answer 3
+
+```{r Answer3}
+(storm_month <- storms %>% 
+    mutate(
+      mon = if_else(
+        month < 10, 
+        str_pad(month, width = 2, side = "left", pad = "0"), 
+        paste(month)
+      )
+    ) %>% 
+    group_by(Month = mon) %>% 
+    distinct(name) %>% 
+    summarise(No_of_Storms = n())
+)
+ggplot(data = storm_month) +
+  geom_col(mapping = aes(x = Month, y = No_of_Storms))
+```
+Conclusion 3: From the above graph, the Atlantic monsoon months, i.e. from July to November, see high number of tropical storms while winter months see almost none.
+
