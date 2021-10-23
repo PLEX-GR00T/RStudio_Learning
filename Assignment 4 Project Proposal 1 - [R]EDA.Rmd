@@ -1,0 +1,171 @@
+---
+title: "Project Proposal 1 - [R]EDA "
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## INTRODUCTION
+
+Just to start with our Assignment we need one basic Libarary, which is "tidyverse" in our case.
+
+```{r Library} 
+library(tidyverse) 
+```
+
+
+## DATABASE INFORMATION
+
+For this Assignment our database has different form and we have to convert it to tibble form before we use it, and for this Assignment we are going to make our Working Directory.
+```{r SetWD and Import dataset} 
+setwd("D:\\SJSU_HW\\201\\Data_sets\\college_majors")
+recent_grade <- read.csv("recent_grads.csv")
+as_tibble(recent_grade)
+```
+
+## Info of Missing values.
+Now, here I performing the checks to determine the quality of my "storms" data.
+```{r Missing Values}
+recent_grade %>% summarise(Total_Count = n())
+filter(recent_grade, is.na(Total) | is.na(Men) | is.na(Women) | is.na(ShareWomen)) %>%
+  summarise(Missing_Count = n())
+```
+
+As you can see we have one missing values for these 4 colums. Although, we are not deletign this data entery because, other data of this row is very much important for the future investigation.
+
+## QUESTION 1: Which Major categories has Highest/Lowest numbers of Subject selection, and what are those subjects.
+```{r Question 1}
+bar <- ggplot(data = recent_grade)+
+  geom_bar(
+    mapping = aes(x = Major_category, 
+    fill = Major_category),
+    group = 1,
+    show.legend = TRUE, width = 1
+    ) +
+    theme(aspect.ratio = 1) +
+    labs(x=NULL,y=NULL)
+
+bar + coord_flip() + 
+  theme(
+    legend.box.background = element_rect(),
+    legend.box.margin = margin(6, 6, 6, 6)
+  ) + 
+  labs(
+    title = "NUMBER OR TOTAL SUBJECT IN ALL CATEGORIES. ",
+    x = "MAJOR CATEGORIES",
+    y = "QUANTITY"
+  ) +
+  theme(plot.title = element_text(size = rel(2))) +
+  theme(
+    axis.ticks.length.y = unit(.25, "cm"),
+    axis.ticks.length.x = unit(-.25, "cm"),
+    axis.text.x = element_text(margin = margin(t = .3, unit = "cm"))
+  )
+```
+
+Here, As you can see, we can clearly see from the BAR graph that Engineering departmet has the highest variety or category of the different subject. Just like that we can easily identify Interdisciplinary department with only haveing one subject in it.
+
+We can see this graph different way to make this things more clear, and to get good idea about Major categories.
+```{r Circular Graph}
+bar + coord_polar() +
+  theme(
+    legend.box.background = element_rect(),
+    legend.box.margin = margin(6, 6, 6, 6)
+  )+ 
+  labs(
+    title = "NUMBER OR TOTAL SUBJECT IN ALL CATEGORIES. ",
+    x = "MAJOR CATEGORIES",
+    y = "QUANTITY"
+  ) +
+  theme(plot.title = element_text(size = rel(2))) +
+  theme(
+    axis.ticks.length.y = unit(.25, "cm"),
+    axis.ticks.length.x = unit(-.25, "cm"),
+    axis.text.x = element_text(margin = margin(t = .3, unit = "cm"))
+  )
+```
+
+Even after plotting this we can easily identify thoes subjects. Now, just to see what kind of subject thoes Highest and Lowest categories has. We, are doing filtering just to give you a good idea.
+
+```{r Engineering and Interdisciplinary department}
+Engineering <- filter(recent_grade, Major_category == "Engineering")
+select(Engineering, Major:Major_category)
+
+Interdisciplinary <- filter(recent_grade, Major_category =="Interdisciplinary")
+select(Interdisciplinary, Major:Major_category)
+```
+
+Conclusion : We, have 16 different department as per the graph and we can do a good amount of Statistical plotting. To do that we have to have idea about all the subjects, for which this graph helps us.
+
+## QUESTION 2: Which Major Categories has Highest no of Students.
+```{r Question 2}
+(Head_count <- 
+  group_by(recent_grade,
+            Major_category
+           ) %>% 
+  summarise(Sum = sum((Total), 
+            na.rm =TRUE), 
+            count = n()
+            ) %>%
+  arrange(Sum, order(Major_category))
+)
+```
+
+Here, we made one other column for different object named "Head_count". As we can see in this data that all differnt 16 categories has its own total number of pupulation. I arranged them in Ascending Order so that we can easily identify each of them's numbes.
+
+Now, here we did plot the population.
+```{r Plot Question 2}
+ggplot(data = Head_count) +
+  geom_col(mapping=aes(x = Major_category, y = Sum, fill = Major_category)) +
+  coord_flip() +
+  theme(
+    legend.box.background = element_rect(),
+    legend.box.margin = margin(6, 6, 6, 6)
+  ) + 
+  labs(
+    title = "TOTAL POPULATION IN ALL CATEGORIES. ",
+    x = "MAJOR CATEGORIES",
+    y = "POPULAITON COUNT"
+  ) +
+  theme(plot.title = element_text(size = rel(2))) +
+  theme(
+    axis.ticks.length.y = unit(.25, "cm"),
+    axis.ticks.length.x = unit(-.25, "cm"),
+    axis.text.x = element_text(margin = margin(t = .3, unit = "cm"))
+  ) +
+  scale_y_continuous(labels = scales::comma)
+
+```
+
+Conclusion : From both above question, we can easily figure out that pupulation does not always increase as the subject increase, pupulation behaves randomly. Because, we have most subjects in Engineering, but we have highest pupulation in Business schools.
+
+## QUESTION 3: Find out the Woman's Share in the Major Income sources in all the Majors.
+```{r Question 3}
+w_income <- ggplot(data = recent_grade, mapping = aes(x = ShareWomen, y = Median)) +
+  geom_point(shape = 20,colour = "red", fill = NA , size = 2, stroke = 1 ) +
+  labs(title = "Women's share in Major Incomes.",
+       x = "Women's Share (%)",
+       y = "Median Earning ($)"
+      )
+w_income + 
+  theme(plot.title = element_text(size = rel(3))) +
+  theme(panel.grid.major = element_line(colour = "black")) +
+  theme(panel.border = element_rect(linetype = "dashed", fill = NA)) +
+  theme(axis.ticks = element_line(size = 2)) +
+  
+  theme(
+    axis.ticks.length.y = unit(.25, "cm"),
+    axis.ticks.length.x = unit(-.25, "cm"),
+    axis.text.x = element_text(margin = margin(t = .3, unit = "cm"))
+  ) +
+  
+  scale_x_continuous(labels = scales::percent) +
+  scale_y_continuous(labels = scales::dollar)
+```
+
+From above scatter plot, we can easily give many questions about Women's Share in the Major Income Earnings. Just from looking at the graph we can say that between 50%-75% of the women pupulation have a huge density around earning 40,000$ par year. And only one woman among whole database earns money more than 100K Dollars.
+
+Conclusion : This scatterplot gives us so much information tha we can calculate this same information about Men's earning and can compare the ration or percentage of the total income.
+We, can also can indentify that which field has better influence on women and men, and what are the fields in which womens are usually good at, we can make thoes kind of predictions.
