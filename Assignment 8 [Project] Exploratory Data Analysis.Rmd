@@ -1,0 +1,131 @@
+---
+title: '[Project] Exploratory Data Analysis'
+author: "Priyank Thakkar"
+date: "20/10/2021"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## INTRODUCTION
+
+This data set is all about the students who graduate from the Universities of USA. I am curious to know that does your Major in your study matter or not for your economic success. What is the general trend right now. And, what are the steps we can take before selecting the Major to boost your odds for the same. And mostly what is the share of the women in the different categories. 
+
+## DATA 
+
+This data is from the GitHub repository, from Fivethirtyeight.com.  All data is from American Community Survey 2010-2012 Public Use Micro data series. All Three files in the repository contains basic earnings and labor force information. “recent-grads.csv” contains a more detailed breakdown, including by sex and by the type of job they got. “grad-students.csv” contains details on graduate school attendees. 
+Here, we have used the data from the file of “recent-grades.csv”. And here is the bifurcation of all the Headers and their Descriptions. Our data contains 174x21 size of entries.
+
+Where, we can see that 174 are rows, they represent distinct 174 majors, from all Major Categories available in the data. Moreover, all 21 columns and their representation are below.
+
+
+
+
+For our variable study, we may need all the variables later on for more explorations. But, here are few of the variables that we can focus on.
+ - Total, Men, Women
+ - ShareWomen
+ - Mean 
+ - Employed
+ - Unemployed
+ - Unemployment_rate
+ - College_jobs
+ - Non_college_jobs
+ - Low_wage_jobs
+ 
+ ## Exploratory Data Analysis
+
+```{r EDA}
+library(tidyverse)
+
+setwd("D:\\SJSU_HW\\GitHubSJSU\\RStudio_Learning\\Data_set")
+recent_grade <- read.csv("recent_grads.csv")
+as_tibble(recent_grade)
+```
+
+```{r Missing Value}
+# NA values
+recent_grade %>% summarise(Total_Count = n())
+filter(recent_grade, is.na(Total) | is.na(Men) | is.na(Women) | is.na(ShareWomen)) %>%
+  summarise(Missing_Count = n())
+
+new_recent_grade <- drop_na(recent_grade)
+
+batch <- select(new_recent_grade, Major:ShareWomen, Employed, Unemployed,Unemployment_rate, Median, College_jobs, Non_college_jobs, Low_wage_jobs)
+#head(batch)
+```
+# Part 1 : Unemployment Rate
+From this area of the data, we will get the information about the Median Unemployment rate for department major, from all the different department, regardless of their majors. Which will give us some of the insights to predict about the Department Major itself, that which one is better over another in the view for Employment. 
+
+
+```{r grp}
+(Unemp <- group_by(batch, Major_category) %>%
+   summarise(Avg_Unemployed_Rate = median(Unemployment_rate)))
+```
+```{r plots}
+
+bar <- ggplot(data = Unemp)+
+    geom_col(mapping = aes(x= Major_category, y = Avg_Unemployed_Rate))
+
+bar + coord_flip() + 
+  theme(
+    legend.box.background = element_rect(),
+    legend.box.margin = margin(6, 6, 6, 6)
+  ) + 
+  labs(
+    title = "Median_Unemployment % per Major_Dept",
+    x = "MAJOR CATEGORIES",
+    y = "Unemployed (%)"
+  ) +
+  theme(plot.title = element_text(size = rel(2))) +
+  theme(
+    axis.ticks.length.y = unit(.25, "cm"),
+    axis.ticks.length.x = unit(-.25, "cm"),
+    axis.text.x = element_text(margin = margin(t = .3, unit = "cm"))
+  ) + scale_y_continuous(labels = scales::percent)
+
+```
+# Part 2 : Best Wages for Department Major
+Here, we will explore exactly opposite that, which department has the highest paying scale in general, regardless of their major. 
+```{r income}
+(Avg_income <- group_by(batch, Major_category) %>% 
+   summarise(avg_income = median(Median)))
+Avg_income
+```
+This trend shows that in the 2010-2012 years, the economy is dominated by the Engineering department, with having highest amount of Median Earning. Now, we will see, the portion of the women governs in that domain with their income over all categories.
+
+```{r womens}
+Eng <- filter(batch, Major_category == "Engineering")
+
+w_income <- ggplot(data = recent_grade, mapping = aes(x = ShareWomen, y = Median)) +
+  geom_point(shape = 20, fill = NA , size = 2, stroke = 1 ) +
+  geom_point(data = Eng, mapping = aes(x = ShareWomen, y = Median), color = 'red', shape = 24, stroke = 2) +
+  labs(title = "Women's Earning share in Engineering.",
+       x = "Women's Share in Major(%)",
+       y = "Median Earning ($)"
+      )
+
+w_income + 
+  theme(plot.title = element_text(size = rel(3))) +
+  theme(panel.grid.major = element_line(colour = "black")) +
+  theme(panel.border = element_rect(linetype = "dashed", fill = NA)) +
+  theme(axis.ticks = element_line(size = 2)) +
+  
+  theme(
+    axis.ticks.length.y = unit(.25, "cm"),
+    axis.ticks.length.x = unit(-.25, "cm"),
+    axis.text.x = element_text(margin = margin(t = .3, unit = "cm"))
+  ) +
+  
+  scale_x_continuous(labels = scales::percent) +
+  scale_y_continuous(labels = scales::dollar)
+
+```
+From the graph, It is very obvious to see that, women has peak pay/income if they are from Engineering department. Which also satisfy the general trend of domination of Engineering Department over all the departments. As, it looks more convincing when we match our previous Assignment Project proposal 1, that Engineering department has the most numbers of varies majors. Moreover, they are on 2nd position with mean population of all department.
+
+## Hypothesis
+Mean Earning for categories from the observation, which has Median Unemployment rate grater than 8.5% are least earning of all the categories.
+  - Does women earn the least in Social Science, Computer & mathematics or Art? considering it's normally distributed between gender. 
+  - Does top 3 categories with highest mean earning has more College_jobs then the rest?
+  - Does non college jobs, and low wage jobs has direct relationship with the unemployment rate?
