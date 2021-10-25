@@ -1,0 +1,213 @@
+---
+title: "Probability"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## How to read this document
+
+Each header contains a problem number. Below the problem number, I restate and then answer each question. 
+The code that I used to calculate the answers will be after the questions, unless the question/code requires a significant explanation.
+
+## 2.2.12
+
+When all 12 parts are different, there are 479,001,600 different designs \
+If 7 components are identical, but the others are different, then there are 95,040 different designs \
+If 3 components are of one type, and 4 components are of another, and the others are all different, then there are 3,326,400 different designs
+
+``` {r 2.2.12}
+
+factorial(12)
+factorial(12) / factorial(7)
+factorial(12) / (factorial(3) * factorial(4))
+```
+
+
+## 2.5.6
+
+The probability that the second one selected is defective given that the first one was defective is .801% \
+The probability that the first two selected are defective is .008% \
+The probability that the first two selected are both acceptable is 98.2% \
+The probability that the third one selected is defective given that the first 
+and second ones selected were defective is .602% \
+The probability that the third one selected is defective given that the first 
+one selected was defective and the second one selected was okay is .803% 
+
+``` {r 2.5.6}
+4/499 
+5 / 500 * 4 / 499 
+495/500 * 495/499
+3/498
+4/498
+5 / 500 * 4 / 499 * 3 / 498
+```
+
+## 2.6.4
+
+The probability that a failure is due to an induced substance is 9.49% \
+The probability that a failure is due to disease or infection is 14.79% 
+
+``` {r 2.6.4}
+.13 * .73 * 100
+.87 * .17 * 100
+```
+
+## 2.7.3
+
+A and B are not independent events because when you remove a container of orange
+juice from the batch, it affects the probability that the next container you remove
+will be defective.
+
+If sampling was done with replacement, then A and B would be independent. 
+
+## 2.8.3 
+
+The probability that the test will signal is 98.5% \
+The probability that chlorinated compounds are present if the test signals is 60%
+```{r 2.8.3}
+.997*.6 + .9995*.27 + .897 * .13
+```
+
+## 3.1.15 and 3.2.15
+
+I can combine the answers for 3.1.15 and 3.2 into a single table. I am assuming
+that the Probability Mass Function is equivalent to the Probability Distribution 
+Function (PDF) that we discussed in-class and that the 
+Cumulative Mass Distribution Function is equivalent to the Cumulative 
+Probability Distribution Function (CDF) that we talked about in-class. 
+
+X represents the number of wafers that pass.
+
+| X | PDF  | CDF  |
+|---|------|------|
+| 0 | .008 | .008 |
+| 1 | .096 | .104 |
+| 2 | .384 | .488 |
+| 3 | .512 | 1    |
+
+``` {r 3.1.15}
+# P(X = 3)
+.8*.8*.8
+# P (X = 0)
+.2*.2*.2
+# P (X = 1)
+.8*.2*.2 + .2*.8*.2 + .2*.2*.8
+# P (X = 2)
+.8*.8*.2 + .8*.2*.8 + .2*.8*.8
+```
+
+## 3.5.12
+
+The probability that exactly one person will stay for 4 hours or less is 14.2% \
+The probability that exactly two people will wait more than 4 hours is 32.2% \
+The probability that at least one person waits more than 4 hours is 96.3% \
+
+``` {r 3.5.12}
+p_less_equal_four_hours = (3.8 + 10.2 + 17.2 + 20.4) / 100
+
+#we can just use binomial distribution here, treating any visit less than 
+# 4 hours as a success and any visit more than 4 hours as a failure
+n = 5
+
+dbinom(1, n, p_less_equal_four_hours)
+
+# saying exactly 2 people wait more than 4 hours is the same as saying 
+# 3 people wait less than 4 hours
+dbinom(3, n, p_less_equal_four_hours)
+
+# saying at least 1 person waiting more than 4 hours is the same as saying 
+# 4 or fewer people waiting less than 4 hours
+pbinom(4, n, p_less_equal_four_hours)
+```
+
+## 5.1.3
+
+This question is optional so I am going to skip it (at least unless I re-upload this assignment)
+
+
+## 5.4.1
+
+If I can get mu and the standard deviation for X and Y, then I can use the equations on slide 25 of Prob2 to find the Covariance and Correlation of X and Y. I will use the following equations to find mu_x and Var(X).
+
+mu_x = sum(p_i * x_i) and sd_x = sqrt( sum(p_i * (x_i - mu_x))^2 )
+
+I am assuming that p_i in this case is equal to f(x_i, y_i), but I'm unsure if this is actually correct.
+
+Assuming that p_i for both X and y is f(x_i, y_i), then:
+
+The covariance is .734 and the correlation is 1
+``` {r 5.4.1}
+x <- c(10,15,20,25,30)
+y <- c(3,4,5,6)
+f_xy <- c(0.15,0.25,0.25,0.30,0.05)
+
+mu_x <- sum(x * f_xy)
+mu_y <- sum(y * f_xy)
+
+sd_x <- sqrt( sum(f_xy * (x - mu_x)**2 ))
+sd_y <- sqrt( sum(f_xy * (y - mu_y)**2 ))
+
+cov_xy <- sum(f_xy * (x - mu_x) * (y - mu_y))
+cor_xy <- cov_xy / (sd_x * sd_y)
+
+cov_xy
+cor_xy
+```
+
+## 3.5.8
+
+The probability that a student will get more than 20 questions right by guessing is 9.67e-10% \
+The probability that a student will get fewer than 5 questions right by guessing is 21.37% 
+
+```{r 3.5.8}
+# We can treat this like a binomial distribution with 25 events and a 25% chance of success
+n = 25
+p = .25
+
+# by default, pbinom checks for <=. 
+# Can change this to > by setting lower.tail = FALSE
+pbinom(20, n, p, lower.tail=FALSE)
+pbinom(4, n, p)
+```
+
+## 5.1.1
+
+I don't recall covering the properties of a joint probability mass function in-class, so I am a little unsure about how to answer this question. The only property that I can think of is that all of the probabilities adds up to 1. 
+
+1/4 + 1/8 + 1/4 + 1/4 + 1/8 = 1, so that property holds true.
+
+P(X < 2.5, Y < 3) = sum of all probabilities where x < 2.5 and y < 3 = P(1,1) + P(1.5, 2) = 1/4 + 1/8 = 3/8
+
+P(X < 2.5) = P(1, 1) + P(1.5, 2) + P(1.5, 3) = 1/4 + 1/8 + 1/4 = 5/8
+
+P(Y < 3) = P(1,1) + P(1.5, 2) = 1/4 + 1/8 = 3/8
+
+P(X > 1.8, Y > 4.7) = P(3, 5) = 1/8
+
+Like in question 5.4.1, I am assuming that p_i = f(x_i, y_i)
+
+E(X) = 1.8125
+E(Y) = 12.875
+V(X) = .4961
+V(Y) = 1.8594
+``` {r 5.1.1}
+x <- c(1, 1.5, 1.5, 2.5, 3)
+y <- c(1, 2, 3, 4, 5)
+f_xy <- c(1/4, 1/8, 1/4, 1/4, 1/8)
+
+mu_x <- sum(x * f_xy)
+mu_y <- sum(y * f_xy)
+
+var_x <- sum(f_xy * (x - mu_x)**2 )
+var_y <- sum(f_xy * (y - mu_y)**2 )
+
+mu_x
+mu_y
+var_x
+var_y
+```
