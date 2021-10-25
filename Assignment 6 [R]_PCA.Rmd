@@ -1,0 +1,288 @@
+---
+title: "Assignmet 6 [R]_PCA"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Libraries
+
+Here for this Project I think we need to add another library for plotting the 3D graph, Scatterplot3d is the library that provides information and implementation for the same.
+
+```{r Library}
+library(tidyverse)
+library(matlib)
+library(scatterplot3d)
+```
+
+## Data set 1 : SWISS
+Here, from previous project, we have selected Swiss data set as our 1st data set to perform PCA.
+This data set is about Standardized fertility measure and socio-economic indicators for each of 47 French-speaking provinces of Switzerland at about 1888.
+[,1]	Fertility	Ig, ‘common standardized fertility measure’
+[,2]	Agriculture	% of males involved in agriculture as occupation
+[,3]	Examination	% draftees receiving highest mark on army examination
+[,4]	Education	% education beyond primary school for draftees.
+[,5]	Catholic	% ‘catholic’ (as opposed to ‘protestant’).
+[,6]	Infant.Mortality	live births who live less than 1 year.
+
+```{r swiss data}
+Swiss <- select(swiss,Fertility:Infant.Mortality)
+head(Swiss)
+```
+
+Now, we will calculate the Covariance and Correlations our basic as we wants to calculate the PCA. So, lets try which is preferable for us to calculate. Even after that we will need to have the Eigen Values and EigenVectors for the same. As we did that in previous Assignmet we are doing it again just for the references.
+
+```{r cov for swiss}
+# Calculate the Covariance
+cov_sw <- cov(Swiss)
+cov_sw
+
+# Calculate the Correlation 
+cor_sw <- cor(Swiss)
+cor_sw
+
+# Calculate the Scaled Covariance
+scaled_sw <- scale(Swiss)
+ScaleCov <- cov(scaled_sw)
+ScaleCov
+```
+```{r Eigen values for the Swiss as covariance}
+eigenCovsw <-  eigen(cov_sw)
+eigenCovsw
+```
+```{r Eigen values for the Swiss as corelation}
+eigenCorsw <-  eigen(cor_sw)
+eigenCorsw
+```
+Now, we will calculate the Percent Variance, and that will give us the information about, what proportion of total variance is explained by the First, second and till the end of principal component. 
+
+We can calculate Cumulative percent variance just to see that how many columns represents major portion of the data information.
+```{r PVE}
+PV <- eigenCorsw$values/sum(eigenCorsw$values)
+PV
+
+#Cumulative percent variance
+cumsum(PV)
+```
+Now, using the Graphs we will can see that how many variables we need to reperesent the data and what are the variables we can reduce. 
+
+```{r plots for swiss}
+SwCorPlot <- qplot(c(1:6),PV) +
+  geom_line()+
+  geom_point(shape = 20,colour = "red", fill = NA , size = 2, stroke = 1 ) +
+  xlab("Principal Component") +
+  ylab("Percent Variace") +
+  ggtitle("Correlation Plot of SWISS") +
+  scale_y_continuous(labels = scales::percent)+
+  theme(plot.title = element_text(size = rel(2))) +
+  theme(panel.grid.major = element_line(colour = "black")) +
+  theme(panel.border = element_rect(linetype = "dashed", fill = NA)) +
+  theme(axis.ticks = element_line(size = 2)) +
+  
+  theme(
+    axis.ticks.length.y = unit(.25, "cm"),
+    axis.ticks.length.x = unit(-.25, "cm"),
+    axis.text.x = element_text(margin = margin(t = .3, unit = "cm"))
+  ) 
+SwCorPlot
+
+SwCumCorPlot <- qplot(c(1:6),cumsum(PV)) +
+  geom_line()+
+  geom_point(shape = 20,colour = "red", fill = NA , size = 2, stroke = 1 ) +
+  xlab("Principal Component") +
+  ylab("Percent Variace") +
+  ggtitle("Cumulative Correlation Plot of SWISS") +
+  scale_y_continuous(labels = scales::percent) +
+  theme(plot.title = element_text(size = rel(2))) +
+  theme(panel.grid.major = element_line(colour = "black")) +
+  theme(panel.border = element_rect(linetype = "dashed", fill = NA)) +
+  theme(axis.ticks = element_line(size = 2)) +
+  
+  theme(
+    axis.ticks.length.y = unit(.25, "cm"),
+    axis.ticks.length.x = unit(-.25, "cm"),
+    axis.text.x = element_text(margin = margin(t = .3, unit = "cm"))
+  ) 
+SwCumCorPlot
+```
+Now, We will count the Principal Components Score. 
+
+The sample principal components are defined as those linear combinations which have maximum sample variance. If we project the 47 data points onto the first eigen vectors, the projected values are called the first principal component.
+
+```{r axis for swiss}
+sw_selectedEigenValues <- eigenCorsw$vectors[,1:4]
+colnames(sw_selectedEigenValues) = c("Axis 1", "Axis 2", "Axis 3", "Axis 4")
+row.names(sw_selectedEigenValues) = colnames(Swiss)
+sw_selectedEigenValues
+
+```
+
+```{r Principal componenet scores for swiss}
+PC1 <- as.matrix(scaled_sw) %*% sw_selectedEigenValues[,1]
+PC2 <- as.matrix(scaled_sw) %*% sw_selectedEigenValues[,2]
+PC3 <- as.matrix(scaled_sw) %*% sw_selectedEigenValues[,3]
+PC4 <- as.matrix(scaled_sw) %*% sw_selectedEigenValues[,4]
+
+PC <- data.frame(French_speaking_provinces = row.names(Swiss), PC1,PC2,PC3,PC4)
+head(PC)
+```
+
+```{r Visualization of the Principal components selected}
+scatterplot3d(PC[,1:3], angle = 55, pch = 16,
+              main = "3D Principal componenet Graph",
+              xlab = "Fertility Principal Componenet",
+              ylab = "Agriculture Principal Component",
+              zlab = "Examinaiton Principal Component",
+              color = "Blue",
+              type = "h"
+              )
+
+ggplot(PC, aes(PC1,PC2))+
+  modelr::geom_ref_line(h=0) +
+  modelr::geom_ref_line(v=0) +
+  geom_text(aes(label = French_speaking_provinces),size =3) +
+  xlab("Fertility Principal Componenet") +
+  ylab("Agriculture Principal Component") +
+  ggtitle("Swiss - Principal componenet Graph")
+```
+CONCLUSION : In this data set called "Swiss", we found that 94% of the data is been represented by the 1st 4 eigen vectors, and other two is not making major impact on the data set. Moreover Axis 1 and Axis 2 along have the 75% of the data. Axis 1 has a strong negative loading for Fertility, Agriculture, Catholic, Infant Mortality and strong negative loadings for Examination and Education. Same as that, Axis 2 has Mostly positive relationship with every section except Agriculture. So, As per me they shows highest contrast and likelyness to the diven data.
+
+Just to make sure and see the behavior of the Examination which is on Axis 3, we have implemented the 3D model to see the dept of the influence on the data.
+
+## DATASET - 2 Attitude for the PCA. 
+
+For this data set we did the same process and same Graphs just to interpretation and practice. And the end I have provided my own Comparison and Observation of the exercise. And here are the information of the dataset.
+
+From a survey of the clerical employees of a large financial organization, the data are aggregated from the questionnaires of the approximately 35 employees for each of 30 (randomly selected) departments. The numbers give the percent proportion of favourable responses to seven questions in each department.
+
+Y	    rating	    numeric	Overall rating
+X[1]	complaints	numeric	Handling of employee complaints
+X[2]	privileges	numeric	Does not allow special privileges
+X[3]	learning	  numeric	Opportunity to learn
+X[4]	raises	    numeric	Raises based on performance
+X[5]	critical	  numeric	Too critical
+X[6]	advancel	  numeric	Advancement
+
+```{r attitude data}
+# Calculate the Covariance
+Attitude <- select(attitude, rating:advance)
+at <- drop_na(Attitude)
+head(at)
+
+cov_at <- cov(at)
+cov_at
+
+# Calculate the Correlation 
+cor_at <- cor(at)
+cor_at
+
+# Calculate the Scaled Covariance
+scaled_at <- scale(at)
+ScaleCovat <- cov(scaled_at)
+ScaleCovat
+
+```
+
+```{r Eigen values for the Swiss as covariance for at}
+eigenCovat <-  eigen(cov_at)
+eigenCovat
+
+```
+
+```{r Eigen values for the Swiss as corelation for at}
+eigenCorat <-  eigen(cor_at)
+eigenCorat
+
+```
+
+```{r PVE for at}
+PVat <- eigenCorat$values/sum(eigenCorat$values)
+PVat
+#Cumulative percent variance
+cumsum(PVat)
+```
+
+```{r graphs for at}
+atCorPlot <- qplot(c(1:7),PVat) +
+  geom_line()+
+  geom_point(shape = 20,colour = "red", fill = NA , size = 2, stroke = 1 ) +
+  xlab("Principal Component") +
+  ylab("Percent Variance") +
+  ggtitle("Correlation Plot of Attitude") +
+  scale_y_continuous(labels = scales::percent)+
+  theme(plot.title = element_text(size = rel(2))) +
+  theme(panel.grid.major = element_line(colour = "black")) +
+  theme(panel.border = element_rect(linetype = "dashed", fill = NA)) +
+  theme(axis.ticks = element_line(size = 2)) +
+  
+  theme(
+    axis.ticks.length.y = unit(.25, "cm"),
+    axis.ticks.length.x = unit(-.25, "cm"),
+    axis.text.x = element_text(margin = margin(t = .3, unit = "cm"))
+  ) 
+atCorPlot
+
+atCumCorPlot <- qplot(c(1:7),cumsum(PVat)) +
+  geom_line()+
+  geom_point(shape = 20,colour = "red", fill = NA , size = 2, stroke = 1 ) +
+  xlab("Principal Component") +
+  ylab("Percent Variance") +
+  ggtitle("Cumulative Correlation Plot of Attitude") +
+  scale_y_continuous(labels = scales::percent) +
+  theme(plot.title = element_text(size = rel(2))) +
+  theme(panel.grid.major = element_line(colour = "black")) +
+  theme(panel.border = element_rect(linetype = "dashed", fill = NA)) +
+  theme(axis.ticks = element_line(size = 2)) +
+  
+  theme(
+    axis.ticks.length.y = unit(.25, "cm"),
+    axis.ticks.length.x = unit(-.25, "cm"),
+    axis.text.x = element_text(margin = margin(t = .3, unit = "cm"))
+  ) 
+atCumCorPlot
+```
+
+```{r axis for at}
+at_selectedEigenValues <- eigenCorat$vectors[,1:4]
+colnames(at_selectedEigenValues) = c("Axis 1", "Axis 2", "Axis 3", "Axis 4")
+row.names(at_selectedEigenValues) = colnames(at)
+at_selectedEigenValues
+```
+"as we can see that 1st colume is showing +ve values and can be the major factor for the attitude, 
+and Complainsts are having -ve relation with the raises, critical and advance. while Privileges 
+shows the positive relations with learning and advance only. 
+
+so we going to use all 3 columns to so represent the major values and their behavior.
+"
+```{r Principal componenet scores for at}
+PC1at <- as.matrix(scaled_at) %*% at_selectedEigenValues[,1]
+PC2at <- as.matrix(scaled_at) %*% at_selectedEigenValues[,2]
+PC3at <- as.matrix(scaled_at) %*% at_selectedEigenValues[,3]
+
+PCat <- data.frame(Employee = row.names(at), PC1at,PC2at,PC3at)
+head(PCat)
+```
+
+```{r Visualization of the Principal components selected for at}
+scatterplot3d(PCat[,1:3], angle = 60, pch = 16,
+              main = "Attitude - Principal componenet Graph",
+              xlab = "Ratings Principal Componenet",
+              ylab = "Complaints Principal Component",
+              zlab = "Privileges Principal Component",
+              color = "red",
+              type = "h"
+              )
+
+ggplot(PCat, aes(PC1at,PC2at))+
+  modelr::geom_ref_line(h=0) +
+  modelr::geom_ref_line(v=0) +
+  geom_text(aes(label = Employee),size =3) +
+  xlab("Ratings Principal Componenet") +
+  ylab("Complaints Principal Component") +
+  ggtitle("Attitude - Principal componenet Graph")
+```
+CONCLUSION :  In this data set called "Attitude", we found that 90% of the data is been represented by the 1st 4 eigen vectors, and other two is not making major impact on the data set. Moreover Axis 1 and Axis 2 along have the 69% of the data. Axis 1 has a strong Positive loading for all the parameters. But, Axis 2 shows Negative relations with raises, critical and advance categories. So, As per me first axis shows major data holding for the further interpretations. 
+
+Just to make sure and see the behavior of the Examination which is on Axis 3, we have implemented the 3D model to see the dept of the influence on the data.
