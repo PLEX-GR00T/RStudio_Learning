@@ -1,0 +1,205 @@
+---
+title: "Assignment 5 [R]_Matrix_Operations"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## INTRODUCTION
+IMPORTANT NOTE : In this assignment I have used three Data sets, Just out of curiosity. Two data set with Int values, and one with Float values and having NA's in it. And I leaned a lot from the 3rd datat set with NA's.
+
+Now, for this Assignment we only need two libraries, one from which we have taken the Data sets. And the one to do Matrix operations.
+
+```{r Libraries}
+library(tidyverse)
+library(matlib)
+```
+
+## DATABASE INFORMATION AND FILTERING
+
+Here, we have three data sets. Attitude with all numeric value. Swiss with having strings and numerical values. The 3tr one is txhousing, with NA's and good amount of float values and string values in it.
+
+Here, I had to remove the cheractors and strings data, along with NA values. 
+
+```{r Filtering}
+Attitude <- select(attitude, rating:advance)
+Swiss <- select(swiss,Fertility:Infant.Mortality)
+Txhousing <- select(txhousing, year:date)
+Txh <- drop_na(Txhousing)
+```
+
+## Question 1: Compute the variance - covariance matrix
+
+Here, we will find the Covariance of the Datasets. We have, some inbuilt function called cov() from "matlib" Library. As we have to operate from the covariance of this datasets, we have to save them in the objects.  
+
+```{r Question 1}
+at <- cov(Attitude)
+at
+
+sw <- cov(Swiss)
+sw
+
+tx <- cov(Txh)
+tx
+```
+
+# Now, as per the question 1 we have to calculate the variance too. Which is here.
+
+```{r variance}
+var(Attitude)
+var(Swiss)
+var(Txh)
+```
+
+## Questions 2: Check to see if the matrix is square, symmetric, orthogonal?
+
+For the Square matrix, it have to have same numbers of Columns and Rows, then nd then only it will be called as Square matrix. As you can see the result of the same from the above.
+
+```{r Square check}
+is_square_matrix(at)
+is_square_matrix(sw)
+is_square_matrix(tx)
+```
+
+As per the definition, A matrix is the Symmatric if it is a Square matrix and it's transpose is the as it's original matrix. You can see that result over here what we calculated. And just to make sure, we also calculated it with inbuilt function. That also cross checks with our results.
+
+```{r Symmatry check}
+Trans_at <- t(at)
+Trans_at
+at
+is_symmetric_matrix(at)
+
+Trans_sw <- t(sw)
+Trans_sw
+sw
+is_symmetric_matrix(sw)
+
+Trans_tx <- t(tx)
+Trans_tx
+tx
+is_symmetric_matrix(tx)
+
+```
+
+To test whether a matrix is an orthogonal matrix, we multiply the
+matrix to its transpose. If the result is an identity matrix, then the input 
+matrix is an orthogonal matrix.
+
+Even though we have calculated the Transpose of the matrix and it is not an Identity matrix, we
+can always double ckeck our ans with inbuilt function from "matlib".
+
+```{r Orthogonal check}
+resA <- Trans_at %*% at
+resA
+is_orthogonal_matrix(at)
+
+
+resS <- Trans_sw %*% sw
+resS
+is_orthogonal_matrix(sw)
+
+
+resT <- Trans_tx %*% tx
+resT
+is_orthogonal_matrix(tx)
+```
+
+## Question 3: Is it positive definite? 
+
+Definition says that a matrix is positive definite if it’s symmetric and all its eigenvalues are positive. As you can see from the results that we have all positive eigen values. so they all are Positive definite matrixs.
+
+```{r Positive definite}
+evAt <- eigen(at)
+eigen.values.At <- evAt$values
+eigen.values.At
+
+evSw <- eigen(sw)
+eigen.values.Sw <- evSw$values
+eigen.values.Sw
+
+evTx <- eigen(tx)
+eigen.values.Tx <- evTx$values
+eigen.values.Tx
+
+```
+
+## Question 4 : Compute the eigenvalues and eigenvectors.
+
+As we have calculated the eigenvalues before, here I am showing you only eigenvalues and eigenvectors. And we going to store them for the further calculations. 
+
+```{r eigenvalues}
+eigen.values.At <- evAt$values
+eigen.vector.At <- evAt$vectors
+eigen.values.At
+eigen.vector.At
+
+eigen.values.Sw <- evSw$values
+eigen.vector.Sw <- evSw$vectors
+eigen.values.Sw
+eigen.vector.Sw
+
+eigen.values.Tx <- evTx$values
+eigen.vector.Tx <- evTx$vectors
+eigen.values.Tx
+eigen.vector.Tx
+
+```
+
+## Question 5 : Find inverse and square root of the matrix using spectral decomposition.
+
+I tried to explain how I solved this spectral decomposition, to find the Inverse. And just like the same way I calculated the Square root of the Matrix, but different Equation. As you have propose the same in Liner2.pdf on page 18 to 20.
+
+suppose A = PDP'
+
+where 
+A = our data orthogonal matrix
+P = matrix of eigenvector of A
+P' = eigenvector transpose or A
+D = diagonal matrix with eigenvalues or A
+
+Let's find the Transposition of the eigenvectors.
+
+```{r Inverse}
+trans.eigen.vector.At <- t(eigen.vector.At)
+trans.eigen.vector.At
+
+trans.eigen.vector.Sw <- t(eigen.vector.Sw)
+trans.eigen.vector.Sw
+
+trans.eigen.vector.Tx <- t(eigen.vector.Tx)
+trans.eigen.vector.Tx
+```
+
+Now, we will compute Inverse of the Matrix as Spectral decomposition. For which we have to calculate the 3 different Matrix multiplications. 
+
+```{r inverse as SD}
+inv.At <- eigen.vector.At %*% inv(diag(eigen.values.At)) %*% trans.eigen.vector.At
+inv.At
+
+inv.Sw <- eigen.vector.Sw %*% inv(diag(eigen.values.Sw)) %*% trans.eigen.vector.Sw
+inv.Sw
+
+inv.Tx <- eigen.vector.Tx %*% inv(diag(eigen.values.Tx)) %*% trans.eigen.vector.Tx
+inv.Tx
+```
+
+The Exact same way but with the different Equation we will calculate the Square root of the 
+Matrix.
+
+```{r sqrt}
+Sqr.At <- eigen.vector.At %*% diag(sqrt(eigen.values.At)) %*% trans.eigen.vector.At
+Sqr.At
+
+Sqr.Sw <- eigen.vector.Sw %*% diag(sqrt(eigen.values.Sw)) %*% trans.eigen.vector.Sw
+Sqr.Sw
+
+Sqr.Tx <- eigen.vector.Tx %*% diag(sqrt(eigen.values.Tx)) %*% trans.eigen.vector.Tx
+Sqr.Tx
+
+```
+
+Conclusion : As far as I learned from this Assignment, I can easily say that Eigenvectors and Eigenvalues simplifies the Matrix operation for us. And save good amount of time and storage for the calculation. They shows the direction of the variance, in which side data is distributed. The number of Eigenvalues/Vector somehow propose the numbers of directions that data has, from which all we can get some kind of conclusions depending on the data. 
+
+However, All the data set are in this project are not related with each other, and haven't work on connected data set to drew result after this matrix operations.
