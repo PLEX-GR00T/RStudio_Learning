@@ -1,0 +1,115 @@
+---
+title: "Untitled"
+author: "shilpa gupta"
+date: "10/24/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## ANOVA
+
+**Analysis of Variance** technique partitions the total variability in the sample data into component parts - variance explained by the regression line and the residual variance unexplained by the regression line. 
+
+ANOVA F-Test
+$F_0 = MS_R/MS_E$
+Under null hypothesis $F_0$ has F-distribution with $(a-1)$ and $a(n-1)$ degrees of freedom
+
+Lets perform ANOVA on our model from previous section   
+
+```{r boxplot_aov, exercise = TRUE}
+boxplot(mpg~as.factor(cyl),data=mtcars, main="Car Mileage Data",
+   xlab="Number of Cylinders", ylab="Miles Per Gallon")
+```
+
+
+```{r aov_example_, exercise=TRUE}
+fit = aov(mpg~as.factor(cyl), data=mtcars)
+anova(fit)
+```
+
+## Correlation among Input Variables
+Are the input variables correlated? Lets start with computing and visualizing the correlation matrix
+```{r pca,exercise=TRUE}
+library(corrplot)
+library(tidyverse)
+library(car)
+corrplot.mixed(cor(mtcars[,-1]), order="hclust", tl.col="black")
+```
+
+## Regression
+Building empirical models
+
+Before we begin regression modeling, we need to check the distribution of the response we are trying to predict
+
+```{r dist_extra, eval=FALSE, include=FALSE}
+#qqnorm(mtcars$mpg)
+#qqline(mtcars$mpg, distribution = qnorm )
+```
+
+```{r check_dist_, exercise=TRUE}
+ggplot(data = mtcars, aes(mpg)) + geom_histogram(mapping = aes(x = mpg, y = stat(density)), bins = 7) +
+   stat_function(
+    fun = dnorm, 
+    args = list(mean = mean(mtcars$mpg), sd = sd(mtcars$mpg)), 
+    lwd = 2, 
+    col = 'red')
+mpg <- ggplot(data = mtcars, aes(sample = mpg))
+mpg + stat_qq(distribution = stats::qnorm) + stat_qq_line() +
+  labs(y = 'sample quantiles', x = 'theoretical quantiles') + 
+  theme(text = element_text(size = 16))
+```
+
+
+Some of the questions we are trying to address with performing regression analysis
+Q: Is the model statistically different from zero (p-value < 0.05)?
+Q: Is the model predictive (Adjusted R-squared > 0.95).
+
+```{r reg_model_, eval=FALSE, include=FALSE}
+full_model = "cyl+disp+hp+drat+wt+qsec+vs+am+gear+carb" 
+sig_model = "am+qsec+wt"
+```
+
+
+Fit a full model
+```{r reg_example, exercise=TRUE}
+fit = lm(mpg~wt+ as.factor(cyl), data=mtcars)
+summary(fit)
+```
+
+### Residual Analysis
+```{r reg_resi, exercise =TRUE, exercise.setup = "reg_example"}
+plot(fit)
+```
+
+
+## Other Diagnostic functions 
+Other functions you can try:
+
+* coefficients(fit) # model coefficients 
+* confint(fit, level=0.95) # CIs for model parameters
+* fitted(fit) # predicted values
+* residuals(fit) # residuals
+* anova(fit) # anova table
+* vcov(fit) # covariance matrix for model parameters
+* influence(fit) # regression diagnostics
+
+```{r reg_func, exercise = TRUE, exercise.setup = "reg_example"}
+confint(fit, level=0.95)
+```
+
+```{r check_res, eval=FALSE, include=FALSE}
+# diagnostic plots
+layout(matrix(c(1,2,3,4),2,2)) # optional 4 graphs/page
+plot(fit)
+```
+
+## Additional Regression Diagnostics
+```{r outlier_lev, exercise =TRUE, exercise.setup = "reg_example"}
+# Assessing Outliers
+outlierTest(fit) # Bonferonni p-value for most extreme obs
+qqPlot(fit, main="QQ Plot") #qq plot for studentized resid
+leveragePlots(fit) # leverage plots
+```
