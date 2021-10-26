@@ -1,0 +1,107 @@
+---
+title: "Regression"
+author: "Priyank Thakkar"
+date: "25/10/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+```{r Library}
+library(tidyverse)
+library(corrplot)
+library(car)
+```
+
+## Dataset Format : SWISS
+
+Here, from previous project "[R]-PCA", we have selected Swiss data set as our dataset to perform Linear Regression.
+This data set is about Standardized fertility measure and socio-economic indicators for each of 47 French-speaking provinces of Switzerland at about 1888. Each of which is in percent, i.e., in [0, 100].
+[,1]	Fertility	Ig, ‘common standardized fertility measure’
+[,2]	Agriculture	% of males involved in agriculture as occupation
+[,3]	Examination	% draftees receiving highest mark on army examination
+[,4]	Education	% education beyond primary school for draftees.
+[,5]	Catholic	% ‘catholic’ (as opposed to ‘protestant’).
+[,6]	Infant.Mortality	live births who live less than 1 year.
+
+All variables but ‘Fertility’ give proportions of the population.
+
+```{r summary, exercise=TRUE}
+data(swiss)
+summary(swiss)
+```
+## Variable Distribution
+
+```{r Var_dist, exercise=TRUE}
+pairs(swiss, panel = panel.smooth, main = "swiss data", col = 3 + (swiss$Catholic > 50))
+```
+
+```{r histogram_dist, exercise=TRUE}
+# plot(density(swiss$Fertility),main="Fertility",xlab="Fertility")
+# rug(swiss$Fertility)
+# # hist(swiss$Fertility,freq=F,add=T)
+# hist(swiss$Fertility,main="Fertility",xlab="Fertility")
+```
+
+```{r check_dist_, exercise=TRUE}
+ggplot(data = swiss, aes(Fertility)) + 
+  geom_histogram(mapping = aes(x = Fertility, y = stat(density)), bins = 7) +
+   stat_function(
+    fun = dnorm, 
+    args = list(mean = mean(swiss$Fertility), sd = sd(swiss$Fertility)), 
+    lwd = 2, 
+    col = 'red')
+
+Fertility <- ggplot(data = swiss, aes(sample = Fertility))
+
+Fertility + 
+  stat_qq(distribution = stats::qnorm) + stat_qq_line() +
+  labs(y = 'sample quantiles', x = 'theoretical quantiles') + 
+  theme(text = element_text(size = 16))
+```
+### Findings/Conclusion (Histogram)
+
+* In Histogram Plot is skewed or leaned towards the right side a little bit.
+* Fertility rates are mostly between 60-90%
+
+## ANOVA
+
+**Analysis of Variance** technique partitions the total variability in the sample data into component parts - variance explained by the regression line and the residual variance unexplained by the regression line. 
+
+ANOVA F-Test
+$F_0 = MS_R/MS_E$
+Under null hypothesis $F_0$ has F-distribution with $(a-1)$ and $a(n-1)$ degrees of freedom
+
+Lets perform ANOVA on our model from previous section   
+
+```{r boxplot_aov, exercise = TRUE}
+boxplot(swiss, xlab="Six Variables", ylab="Percentage", main="Box Plot of Variables")
+
+# boxplot(mpg~as.factor(cyl),data=mtcars, main="Car Mileage Data",
+#    xlab="Number of Cylinders", ylab="Miles Per Gallon")
+```
+### Findings/Conclusion (Boxplot)
+
+* Catholic variable covers wide range of values
+* Infant.Mortality variable is very condensed
+* Education and Fertility seems to have some outliers
+
+## Correlation among Input Variables
+Are the input variables correlated? Lets start with computing and visualizing the correlation matrix
+
+```{r corrplot_dist, exercise=TRUE}
+cor(swiss)
+corrplot.mixed(cor(swiss[,-1]), order="hclust", tl.col="black")
+
+pairs(swiss)
+```
+### Findings/Conclusion (Correlation)
+
+* All correlations with Fertility are less than **0.8**, indicating no signs of strong multicollinearity.
+* Correlations are between **0.3-0.8**, indicating mild multicollinearity.
+* Plot shows linear relationship between **Agriculture and Examination**. Moreover, also between
+**Examination and Education**.
