@@ -2,22 +2,25 @@
 title: "Regression"
 author: "Priyank Thakkar"
 date: "25/10/2021"
-output: pdf_document
+output:
+  word_document: default
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+# R Markdown
 
 ```{r Library}
 library(tidyverse)
 library(corrplot)
+library(MASS)
 library(car)
 ```
 
-## Dataset Format : SWISS
+# Dataset Format : SWISS
 
 Here, from previous project "[R]-PCA", we have selected Swiss data set as our dataset to perform Linear Regression.
 This data set is about Standardized fertility measure and socio-economic indicators for each of 47 French-speaking provinces of Switzerland at about 1888. Each of which is in percent, i.e., in [0, 100].
@@ -34,18 +37,54 @@ All variables but ‘Fertility’ give proportions of the population.
 data(swiss)
 summary(swiss)
 ```
-## Variable Distribution
+# Variable Distribution
 
 ```{r Var_dist, exercise=TRUE}
 pairs(swiss, panel = panel.smooth, main = "swiss data", col = 3 + (swiss$Catholic > 50))
 ```
 
-```{r histogram_dist, exercise=TRUE}
-# plot(density(swiss$Fertility),main="Fertility",xlab="Fertility")
-# rug(swiss$Fertility)
-# # hist(swiss$Fertility,freq=F,add=T)
-# hist(swiss$Fertility,main="Fertility",xlab="Fertility")
+# ANOVA
+
+**Analysis of Variance** technique partitions the total variability in the sample data into component parts - variance explained by the regression line and the residual variance unexplained by the regression line. 
+
+ANOVA F-Test
+$F_0 = MS_R/MS_E$
+Under null hypothesis $F_0$ has F-distribution with $(a-1)$ and $a(n-1)$ degrees of freedom
+
+Lets perform ANOVA on our model from previous section   
+
+```{r boxplot_aov, exercise = TRUE}
+boxplot(swiss, xlab="Six Variables", ylab="Percentage", main="Box Plot of Variables")
 ```
+### Findings/Conclusion (Boxplot)
+
+* Catholic variable covers wide range of values
+* Infant.Mortality variable is very condensed
+* Education and Fertility seems to have some outliers
+
+```{r aov_example_, exercise=TRUE}
+fit = aov(Fertility~ ., data=swiss)
+anova(fit)
+```
+# Correlation among Input Variables
+Are the input variables correlated? Lets start with computing and visualizing the correlation matrix
+
+```{r corrplot_dist, exercise=TRUE}
+cor(swiss)
+corrplot.mixed(cor(swiss[,-1]), order="hclust", tl.col="black")
+
+pairs(swiss)
+```
+### Findings/Conclusion (Correlation)
+
+* All correlations with Fertility are less than **0.7**, indicating no signs of strong multicollinearity.
+* Correlations are between **0.3-0.7**, indicating mild multicollinearity.
+* Plot shows linear relationship between **Agriculture and Examination**. Moreover, also between
+**Examination and Education**.
+
+# Regression 
+
+Building empirical models
 
 ```{r check_dist_, exercise=TRUE}
 ggplot(data = swiss, aes(Fertility)) + 
@@ -68,40 +107,68 @@ Fertility +
 * In Histogram Plot is skewed or leaned towards the right side a little bit.
 * Fertility rates are mostly between 60-90%
 
-## ANOVA
 
-**Analysis of Variance** technique partitions the total variability in the sample data into component parts - variance explained by the regression line and the residual variance unexplained by the regression line. 
+## Fit a Model 
 
-ANOVA F-Test
-$F_0 = MS_R/MS_E$
-Under null hypothesis $F_0$ has F-distribution with $(a-1)$ and $a(n-1)$ degrees of freedom
-
-Lets perform ANOVA on our model from previous section   
-
-```{r boxplot_aov, exercise = TRUE}
-boxplot(swiss, xlab="Six Variables", ylab="Percentage", main="Box Plot of Variables")
-
-# boxplot(mpg~as.factor(cyl),data=mtcars, main="Car Mileage Data",
-#    xlab="Number of Cylinders", ylab="Miles Per Gallon")
+```{r lm_example, exercise = TRUE}
+model1 <- lm(Fertility ~ ., swiss)
+summary(model1)
 ```
-### Findings/Conclusion (Boxplot)
+## Residual Analysis
 
-* Catholic variable covers wide range of values
-* Infant.Mortality variable is very condensed
-* Education and Fertility seems to have some outliers
+```{r stepwise}
+# stepAIC(model1, direction = "both")
+# link of reference : https://ashutoshtr.medium.com/what-is-stepaic-in-r-a65b71c9eeba
 
-## Correlation among Input Variables
-Are the input variables correlated? Lets start with computing and visualizing the correlation matrix
-
-```{r corrplot_dist, exercise=TRUE}
-cor(swiss)
-corrplot.mixed(cor(swiss[,-1]), order="hclust", tl.col="black")
-
-pairs(swiss)
+model2 <- step(model1)
 ```
-### Findings/Conclusion (Correlation)
+* The final AIC of model Achieved = 189.86
+* Alternatively use this command for to check the AIC values available.
+* And select the model with having the lowest AIC number, means Small lose of data while performing that model.
 
-* All correlations with Fertility are less than **0.8**, indicating no signs of strong multicollinearity.
-* Correlations are between **0.3-0.8**, indicating mild multicollinearity.
-* Plot shows linear relationship between **Agriculture and Examination**. Moreover, also between
-**Examination and Education**.
+```{r summary model2}
+summary(model2)
+```
+
+```{r avon}
+anova(model1, model2)
+# drop1(model1,test='F')
+```
+### Findings/Conclusion (Model1 and Model2)
+
+* By both a T-test and an ANOVA F test we find **Examination** does not have significant effect on **Fertility**.
+* Final Model2 $(Fertility ~ (Agriculture + Education + Catholic + Infant.Mortality), data = swiss)$ 
+
+```{r residual plot}
+par(mfrow=c(2,2))
+plot(model2)
+```
+
+## Other Diagnostic functions 
+Other functions you can try:
+
+* coefficients(model2) # model coefficients 
+* confint(model2, level=0.95) # CIs for model parameters
+* fitted(model2) # predicted values
+* residuals(model2) # residuals
+* anova(model2) # anova table
+* vcov(model2) # covariance matrix for model parameters
+* influence(model2) # regression diagnostics
+
+```{r reg_func, exercise = TRUE, exercise.setup = "reg_example"}
+confint(model2, level=0.95)
+```
+
+```{r check_res, eval=FALSE, include=FALSE}
+# diagnostic plots
+layout(matrix(c(1,2,3,4),2,2)) # optional 4 graphs/page
+plot(model2)
+```
+
+## Additional Regression Diagnostics
+```{r outlier_lev, exercise =TRUE, exercise.setup = "reg_example"}
+# Assessing Outliers
+outlierTest(model2) # Bonferonni p-value for most extreme obs
+qqPlot(model2, main="QQ Plot") #qq plot for studentized resid
+leveragePlots(model2) # leverage plots
+```
