@@ -1,0 +1,187 @@
+---
+title: "Logistic Regression"
+author: "Priyank Thakkar"
+date: "10/11/2021"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Import Data
+
+```{r get data}
+library(tidyverse)
+
+setwd("D:\\SJSU_HW\\GitHubSJSU\\RStudio_Learning\\Data_set")
+AP_data <- read.csv("AutoPurchaseData.csv")
+as_tibble(AP_data)
+
+# Let's get some Summary of this data.
+summary(AP_data)
+```
+## About Data 
+
+A study was performed to investigate new automobile purchases. A sample of 20 families was selected. Each family was surveyed to determine the age of their oldest vehicle and their total family income. A followup survey was conducted 6 months later to determine if they had actually purchased a new vehicle during that time period (y= 1 indicates yes and y=0 indicates no)
+
+* [,1]	Income        : Total  family income in the Dollar($)
+* [,2]	Age           : Represent the Age of their Oldest Vehicle in Year 
+* [,3]	Purchased     : 0 = No purchased, 1 = yes purchased (in last 6 months)
+
+Now let's add some Libraries.
+
+```{r Library}
+library(tidyverse)
+library(corrplot)
+str(AP_data)
+```
+# Graphs to Understand Data
+
+```{r corrplot_dist, exercise=TRUE}
+cor(AP_data)
+corrplot.mixed(cor(AP_data[,-1]), order="hclust", tl.col="black")
+pairs(AP_data)
+```
+
+# Scatterplot of Factoring
+
+Here, we will factor our **Purchased** columns in categorical output. And will show them on the plot. And will use them in Prediction and in Odds results.
+
+```{r Factors}
+AP_data$Purchased <- factor(AP_data$Purchased, levels=c(0,1))
+str(AP_data)
+```
+
+```{r graph}
+plot(AP_data$Income, AP_data$Age, col=c("red","blue")[AP_data$Purchased],pch=20, cex=2)
+axis(side=1, at=c(0:9))
+axis(side=2, at=c(0:9))
+abline(h=0:9,v=0:9, col="gray", lty=3)
+```
+
+# QUESTION 1 : Creating and Fitting the Model
+
+```{r create model}
+mymodel = glm(Purchased ~ ., data = AP_data, family = binomial)
+summary(mymodel)
+```
+This means, "Use the general linear model function to create a model that predicts Purchase from Age and Income, using the data in AP_data, with a logistic regression equation. here, *glm* function is a general-purpose prediction model maker. The family="binomial" parameter creates a logistic regression prediction model.
+
+# QUESTION 3 : interpret the model coefficients β1 and β2
+
+The summary function displays a lot of information. The key information is in the coefficients section: 
+
+------------------------------
+Coefficients:
+
+                Estimate   
+* (Intercept) -7.047e+00  (β0)
+* Income       7.382e-05  (β1)
+* Age          9.879e-01  (β2)
+------------------------------
+
+# QUESTION 4 : What is the estimated probability that a family with an income of $45,000 and a car that is 5 year old will purchase a new vehicle in the next 6 months?
+
+
+The values **-7.047e+00, 7.382e-05 and 9.879e-01** define a prediction equation that's best explained by an example. Suppose you want to predict the Purchased for a person with **Income = 45000** and **Age = 5**. First, you compute an intermediate z-value using the coefficients and input values:
+
+* $Z=β0+β1(Income)+β2(Age)$
+
+```{r z value}
+z = -7.047e+00 + (7.382e-05)*(45000) + (9.879e-01)*(5)
+z
+```
+And then you compute a p-value : The p-value will always be a value between 0 and 1 and is a probability. If p <= 0.5, the predicted value is the first of the two possible values, **"red = 0,"** in the demo. If p > 0.5, the predicted value is the second possible value, **"blue = 1,"** in the demo. 
+
+* Equation is $p = 1 / (1 + e^-z)$
+
+```{r p value}
+e = 2.71828
+p = 1 / (1 + e^-z)
+p
+if (p <= 0.5) { cat("predicted party = red \n") } else { cat("predicted party = blue \n") }
+```
+So, this value **0.77** says its **blue = 1**, that means the Auto Mobile purchased by them in 6 months.
+
+Now predict same thing form the function. And let's see. 
+```{r predict data frame}
+nd = with(AP_data, data.frame(Income=45000, Age=5))
+nd$pred = predict(mymodel, newdata=nd, type="response")
+nd
+```
+
+Let's predic all the values from the current model.  
+```{r predicts}
+predict(mymodel, AP_data, type="response")
+```
+
+
+# QUESTION 2 : Is the logistic regression model in part a adequate?
+From the reference of this : https://en.wikipedia.org/wiki/Logistic_regression
+
+The odds of the dependent variable equaling a case (given some linear combination $x$ of the predictors) is equivalent to the exponential function of the linear regression expression.Given that the logit ranges between negative and positive infinity, it provides an **adequate** criterion upon which to conduct linear regression and the logit is easily converted back into the odds.
+
+So we define odds of the dependent variable equaling a case (given some linear combination $x$ of the predictors) as follows: 
+
+* $Odds = e^(β0+β1(Income)+β2(Age))$
+
+* $Odds = e^z$
+
+```{r Odds}
+Odds = e^z
+Odds 
+```
+Following the way we can check the Adequacy.
+* Bigger the value of Odds better the Adequacy.
+* More over from the summary function information the AIC: 27.082.
+* Residuals from the summary function information also shows the adequacy, for the residuals we really needs all the values near to 0 or around zero.
+
+-------------------------
+Deviance Residuals:
+
+* 1st quantile  = -0.8045
+* Median        = -0.1397
+* 3rd quantile  = 0.9535
+
+all are around 0 line.
+-------------------------
+
+But, we will compare these parameter with our new model and will say which model is good with all of these Adequacy checks.
+
+# QUESTION 5 : Expand the linear predictor to include an interaction term (, i.e. include a 3rd predictor that is $x1$ × $x2$). Is there an evidence that this term is required in the model?
+
+* New Model : $x3 = Income*Age$
+
+```{r new model}
+n_mymodel = glm(Purchased ~ Income + Age + (Income*Age), data = AP_data, family = binomial)
+summary(n_mymodel)
+```
+
+```{r prediction from new model}
+
+nz = 3.144e-01 + (-1.411e-04)*(45000) + (-2.462e+00)*(5) + (1.014e-04)*(45000)*(5)
+nz
+
+e = 2.71828
+np = 1 / (1 + e^-nz)
+np
+
+if (np <= 0.5) { cat("predicted party = red \n") } else { cat("predicted party = blue \n") }
+```
+```{r new Odds}
+new_Odd = e^nz
+new_Odd 
+```
+
+```{r predicts new glm}
+predict(n_mymodel, AP_data, type="response")
+```
+
+Conclusion : 
+
+* AIC : 24.55, Which is very low, so this model is better then previous one.
+* New Odd : 87.34, which is greater then previous model Odd.
+* P-value : 0.98, This is good probability accuracy, again better then previous model.
+
+We, can use second Logistic Regression model for our future purposes.
