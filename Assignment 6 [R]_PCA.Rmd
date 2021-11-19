@@ -43,7 +43,7 @@ cov_sw
 cor_sw <- cor(Swiss)
 cor_sw
 
-# Calculate the Scaled Covariance
+# Calculate the Scaled Covariance == correlation
 scaled_sw <- scale(Swiss)
 ScaleCov <- cov(scaled_sw)
 ScaleCov
