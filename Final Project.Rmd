@@ -1,0 +1,436 @@
+---
+title: "Final Project"
+author: "Priyank Thakkar"
+date: "06/12/2021"
+output:
+  word_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 1. INTRODUCTION
+
+This data set is all about the students who graduate from the Universities of USA. I am curious to know that does your Major in your study matter or not for your economic success. What is the general trend right now. And, what are the steps we can take before selecting the Major to boost your odds for the same. And mostly what is the share of the women in the different categories. 
+
+# 2. DATA 
+
+This data is from the GitHub repository, from Fivethirtyeight.com.  All data is from American Community Survey 2010-2012 Public Use Micro data series. All Three files in the repository contains basic earnings and labor force information. “recent-grads.csv” contains a more detailed breakdown, including by sex and by the type of job they got. “grad-students.csv” contains details on graduate school attendees. 
+Here, we have used the data from the file of “recent-grades.csv”. And here is the bifurcation of all the Headers and their Descriptions. Our data contains 174x21 size of entries.
+
+Where, we can see that 174 are rows, they represent distinct 174 majors, from all Major Categories available in the data. Moreover, all 21 columns and their representation are below.
+
+**Header**		          **Description** 
+
+* Rank:Rank by median earnings
+* Major_code:Major code
+* Major:Major description
+* Major_category:Category of major 
+* Total:Total number of people with major
+* Sample_size:Sample size (un-weighted) of full-time, year-round ONLY 
+* Men:Male graduates
+* Women:Female graduates
+* ShareWomen:Women as share of total
+* Employed:Number employed
+* Full_time:Employed 35 hours or more
+* Part_time:Employed less than 35 hours
+* Full_time_year_round:Employed at least 50 weeks and at least 35 hours
+* Unemployed:Number unemployed 
+* Unemployment_rate:Unemployed / (Unemployed + Employed)
+* Median:Median earnings of full-time, year-round workers (Normalized)
+* P25th:25th percentile of earnings
+* P75th:75th percentile of earnings
+* College_jobs:Number with job requiring a college degree
+* Non_college_jobs:Number with job not requiring a college degree
+* Low_wage_Jobs:Number in low-wage service jobs
+
+
+For our variable study, we may need all the variables later on for more explorations. But, here are few of the variables that we can focus on for PCA and EDA. 
+
+* Total, Men, Women
+* ShareWomen
+* Mean 
+* Employed
+* Unemployed
+* Unemployment_rate
+* College_jobs
+* Non_college_jobs
+* Low_wage_jobs
+ 
+### 2.1 Load the libraries and Data
+ 
+```{r library and data}
+library(tidyverse)
+setwd("D:\\SJSU_HW\\GitHubSJSU\\RStudio_Learning\\Data_set")
+data_grade <- read.csv("recent_grads.csv")
+recent_grade <- as_tibble(data_grade)
+
+#head of original data
+head(recent_grade)
+
+#summary of data
+summary(recent_grade)
+
+# check if data is tibble
+is_tibble(recent_grade)
+```
+
+### 2.2 Remove Missing values and Creat Variables.
+
+```{r Missing Value}
+# Check if any NA values
+recent_grade %>% summarise(Total_Count = n())
+filter(recent_grade, is.na(Total) | is.na(Men) | is.na(Women) | is.na(ShareWomen)) %>%
+  summarise(Missing_Count = n())
+
+# Drop the NA 
+new_recent_grade <- drop_na(recent_grade)
+
+# Generate our new Data only from the variables that are in need.
+batch <- select(new_recent_grade,
+                Median,
+                Total, 
+                Employed,
+                Full_time,
+                Unemployed,
+                College_jobs,
+                Non_college_jobs,
+                Low_wage_jobs,
+                ShareWomen,
+                Major_category,
+                Unemployment_rate)
+is_tibble(batch)
+head(batch)
+```
+
+
+# 3. EDA
+ 
+Here we, will do some exploratory data analysis that gives us few good reviews,
+on how our data is, and what it means. So, let's ask few questions to ourselves
+for the dataset we have.
+ 
+### 3.1 Is our data Continuous?
+ 
+For that, let's add library called **DataExplorer** that will show us the how
+tidy our dataset is in matters of Columns, Rows and Missing values.
+```{r EDA1}
+library(DataExplorer)
+batch %>% plot_intro()
+```
+
+### 3.2 What is Unemployment Rate of different Majors?
+
+For this we will get the information about the Median Unemployment rate for department major, from all the different department, regardless of their majors. Which will give us some of the insights to predict about the Department Major itself, that which one is better over another in the view for Employment.
+
+```{r grp}
+(Unemp <- group_by(batch, Major_category) %>%
+   summarise(Avg_Unemployed_Rate = median(Unemployment_rate)))
+
+bar <- ggplot(data = Unemp)+
+    geom_col(mapping = aes(x= Major_category, y = Avg_Unemployed_Rate))
+
+bar + coord_flip() + 
+  theme(
+    legend.box.background = element_rect(),
+    legend.box.margin = margin(6, 6, 6, 6)
+  ) + 
+  labs(
+    title = "Unemployment Rate(Median)",
+    x = "Major categories",
+    y = "Unemployed (%)"
+  ) +
+  theme(plot.title = element_text(size = rel(2))) +
+  theme(
+    axis.ticks.length.y = unit(.25, "cm"),
+    axis.ticks.length.x = unit(-.25, "cm"),
+    axis.text.x = element_text(margin = margin(t = .3, unit = "cm"))
+  ) + scale_y_continuous(labels = scales::percent)
+```
+As we can see from the above graph, the media unemployment rate for the "Social
+Science", "Computer & Math" and "Arts" are very high.
+
+### 3.3 What is Women's share in income from Engineering Department.
+```{r womens}
+Eng <- filter(batch, Major_category == "Engineering")
+
+w_income <- ggplot(data = recent_grade, mapping = aes(x = ShareWomen, y = Median)) +
+  geom_point(shape = 20, fill = NA , size = 2, stroke = 1 ) +
+  geom_point(data = Eng, mapping = aes(x = ShareWomen, y = Median), color = 'red', shape = 24, stroke = 2) +
+  labs(title = "Women's income in Eng.",
+       x = "Women's Share in Major(%)",
+       y = "Median Earning ($)"
+      )
+
+w_income + 
+  theme(plot.title = element_text(size = rel(3))) +
+  theme(panel.grid.major = element_line(colour = "black")) +
+  theme(panel.border = element_rect(linetype = "dashed", fill = NA)) +
+  theme(axis.ticks = element_line(size = 2)) +
+  
+  theme(
+    axis.ticks.length.y = unit(.25, "cm"),
+    axis.ticks.length.x = unit(-.25, "cm"),
+    axis.text.x = element_text(margin = margin(t = .3, unit = "cm"))
+  ) +
+  
+  scale_x_continuous(labels = scales::percent) +
+  scale_y_continuous(labels = scales::dollar)
+
+```
+
+As you can see from the Scatter plot, we can interpret that the major higher income
+for the women comes from Engineering department. 
+
+# 4. PCA (Principle Component Analysis)
+
+First get the data on which we have to perform the PCA, because non numeric data
+is not allowed in this process, so lets take this variable from below as our
+new data on which we can perform the PCA.
+
+* Total
+* Mean 
+* Employed
+* Unemployed
+* College_jobs
+* Non_college_jobs
+* Low_wage_jobs
+
+Now, let's perform the PCA on the this data to find out more thing.
+1. Which are the component important to us? 
+2. For the Linear regression model how many components we can select to do the regression and all such.
+
+Let's see how to calculate the PCA from the scratch for this dataset.
+* Calculate Correlation matrix.
+* Calculate Scaled Covariance for later use of Principal component score.
+* Get Eigen Values and Vectors from Correlation matrix.
+* For Percent Variance apply below formula.
+
+* $Percent Variance = EigenValues/sum(EigenValues)$
+  
+### 4.1 Calculate Correlation matrix
+```{r cov }
+# Make another batch to work on PCA we only need numeric data.
+batch <- select(new_recent_grade,
+                Median,
+                Total, 
+                Employed,
+                Full_time,
+                Unemployed,
+                College_jobs,
+                Non_college_jobs,
+                Low_wage_jobs)
+
+# Calculate the Correlation 
+cor <- cor(batch)
+
+# Calculate the Scaled Covariance = correlation
+scaled <- scale(batch)
+ScaleCov <- cov(scaled)
+ScaleCov
+``` 
+### 4.2 Get Eigen Vectors and values
+
+```{r Eigen values as corelation}
+eigenCor <- eigen(cor)
+eigenCor
+```
+
+Now, we will calculate the Percent Variance, and that will give us the information about, what proportion of total variance is explained by the First, second and till the end of principal component. 
+
+We can calculate Cumulative percent variance just to see that how many columns represents major portion of the data information.
+
+```{r PVE}
+# Percent Variance
+PV <- eigenCor$values/sum(eigenCor$values)
+PV
+
+# Cumulative Percent Variance
+cumsum(PV)
+```
+
+### 4.3 Plot the PV and CPV
+
+Now, using the Graphs we will can see that how many variables we need to represent the data and what are the variables we can reduce. 
+
+```{r plots for Grades_students}
+SwCorPlot <- qplot(c(1:8),PV) +
+  geom_line()+
+  geom_point(shape = 20,colour = "red", fill = NA , size = 2, stroke = 1 ) +
+  xlab("Principal Component") +
+  ylab("Percent Variace") +
+  ggtitle("Correlation Plot of Grad Students") +
+  scale_y_continuous(labels = scales::percent)+
+  theme(plot.title = element_text(size = rel(2))) +
+  theme(panel.grid.major = element_line(colour = "black")) +
+  theme(panel.border = element_rect(linetype = "dashed", fill = NA)) +
+  theme(axis.ticks = element_line(size = 2)) +
+  
+  theme(
+    axis.ticks.length.y = unit(.25, "cm"),
+    axis.ticks.length.x = unit(-.25, "cm"),
+    axis.text.x = element_text(margin = margin(t = .3, unit = "cm"))
+  ) 
+SwCorPlot
+
+SwCumCorPlot <- qplot(c(1:8),cumsum(PV)) +
+  geom_line()+
+  geom_point(shape = 20,colour = "red", fill = NA , size = 2, stroke = 1 ) +
+  xlab("Principal Component") +
+  ylab("Percent Variace") +
+  ggtitle("Cumulative Correlation Plot of Grad Students") +
+  scale_y_continuous(labels = scales::percent) +
+  theme(plot.title = element_text(size = rel(2))) +
+  theme(panel.grid.major = element_line(colour = "black")) +
+  theme(panel.border = element_rect(linetype = "dashed", fill = NA)) +
+  theme(axis.ticks = element_line(size = 2)) +
+  
+  theme(
+    axis.ticks.length.y = unit(.25, "cm"),
+    axis.ticks.length.x = unit(-.25, "cm"),
+    axis.text.x = element_text(margin = margin(t = .3, unit = "cm"))
+  ) 
+SwCumCorPlot
+```
+
+Now, We will count the Principal Components Score. 
+
+The sample principal components are defined as those linear combinations which have maximum sample variance. If we project the 172 data points onto the first eigen vectors, the projected values are called the first principal component.
+
+From above graph, we can say that. 1st component contains 79% data, 2nd component contains 92% and if we include 3rd component the total data will be 98%. So no need to add more component, they have very negligent data available which does not bother us. 
+
+### 4.4 Principal Components Score.
+```{r PC for grad student}
+selectedEigenValues <- eigenCor$vectors[,1:3]
+colnames(selectedEigenValues) = c("PC1", "PC2", "PC3")
+row.names(selectedEigenValues) = colnames(batch)
+selectedEigenValues
+```
+
+```{r Principal componenet scores for batch data}
+# Principal component scores for batch data
+PC1 <- as.matrix(scaled) %*% selectedEigenValues[,1]
+PC2 <- as.matrix(scaled) %*% selectedEigenValues[,2]
+PC3 <- as.matrix(scaled) %*% selectedEigenValues[,3]
+
+# get it into one data frame and see the head
+PC <- data.frame(PC1,PC2,PC3)
+head(PC)
+```
+
+### 4.5 Plot the PCA
+We, have selected three principal components so lets visualize them. 
+* Visualize PC1, PC2 and PC3 together.
+* Visualize PC1 and PC2 only.
+  
+```{r Visualization of the Principal components selected}
+library(scatterplot3d)
+
+scatterplot3d(PC[,1:3], angle = 75, pch = 16,
+              main = "Grade Student - 3D PCA Graph",
+              xlab = "PCA 1",
+              ylab = "PCA 2",
+              zlab = "PCA 3",
+              color = "Blue",
+              type = "h"
+              )
+# Calculate the biplot with the variable vectors
+results <- prcomp(batch, scale = TRUE)
+biplot(results, scale = 0.01,  expand=1, xlim=c(-3.0, 2.0), ylim=c(-4.0, 2.0))
+```
+
+By looking at the whole process, and plotting we conclude that we can
+take two Principal component for our further study of this dataset.
+
+# 5. Linear Regression
+
+Now, before going to the regression part lets ask few things to ourselves,
+and check the basic things before going to the regression part.
+By doing the regression, we want to fit the model for predicting the Income.
+
+### 5.1 Check the Histogram of response variable
+
+```{r make it normalized}
+library(ggpubr)
+library(moments)
+# Distribution of Median variable
+ggdensity(batch, x = "Median", fill = "lightgray", title = "Median Salary") +
+  stat_overlay_normal_density(color = "red", linetype = "dashed")
+
+Fertility <- ggplot(data = batch, aes(sample = Median))
+
+Fertility + 
+  stat_qq(distribution = stats::qnorm) + stat_qq_line() +
+  labs(y = 'sample quantiles', x = 'theoretical quantiles') + 
+  theme(text = element_text(size = 16))
+
+# Check the skewness
+skewness(batch$Median, na.rm = TRUE)
+```
+Skewness is a measure of symmetry for a distribution. The value can be positive, negative or undefined. In a skewed distribution, the central tendency measures (mean, median, mode) will not be equal. Which you can see our here.
+
+Generally, when **Mode < Median < Mean** we can call our graphs as Positively 
+skewed. The most frequent values are low; tail is toward the high values (on the right-hand side).
+
+And as we saw the value of the skewness is 2.047032. So, we can say that this 
+value is high. Now, in a trial to transform them to the normal distribution.
+we have to apply the log(x).
+
+```{r make it transform}
+batch$Median = log10(batch$Median)
+
+# Log Distribution of Median variable
+ggdensity(batch, x = "Median", fill = "lightgray", title = "Median Salary") +
+  stat_overlay_normal_density(color = "red", linetype = "dashed")
+
+# Check the skewness of the transformed data.
+skewness(batch$Median, na.rm = TRUE)
+```
+As we can see over here is our skewness is decreased and that number looks like
+0.8487541. Which is very less then 2. So, this transformed data helps us to
+train the data more efficiently because it transformed under the bell curve of the
+Normal Distribution.
+
+Note that transformation makes the interpretation of the analysis much more difficult. For example, if you run a t-test for comparing the mean of two groups after transforming the data, you cannot simply say that there is a difference in the two groups’ means. Now, you have the added step of interpreting the fact that the difference is based on the log transformation. For this reason, transformations are usually avoided unless necessary for the analysis to be valid.
+
+So, for the Validation values, whenever you get the results and you want to interpret 
+it into the real values from the Original Distribution, then you might need to
+take the Anti log of the data.
+
+### 5.2 Fit the model
+```{r check skewness agian}
+library(car)
+temp <- PC
+temp = cbind(temp,Salary = batch$Median)
+#head(temp)
+modelPC <- lm(Salary ~ .,data=temp)
+summary(modelPC)
+```
+From the above values we can say that our model is statistically different from zero (p-value < 0.05) which was our null hypothesis, because the values for all four columns used for prediction (PC1, PC2, PC3) is less than 0.05. The Intercept also has a p-value less than 0.05 and hence is significant.
+
+Moreover, our model is predictive since Adjusted R-squared is 0.9573 which is greater than 0.95. Thus our model is able to explain the variance to a very high degree.
+
+In addition, our Residual Standard error should be near to Zero, and in our case
+it is 0.02244, which is fantastic. Mean in our residual vs Fitted plot, we might
+get the best fit. The lesser the error the greater the model.
+
+### 5.3 Residual Analysis
+
+```{r plot model}
+plot(modelPC)
+```
+
+### Summary
+
+For the over finding of this project is, PCA is really so powerful tool to
+do the dimensional reduction. So that we can interpret the generated the PCA to 
+predict the linear regression model. In the starting we had 8 different variables,
+which is really so hard to handle, PCA help us to find the important dimensions.
+
+Another finding from this project is that if you have really skewed data, your
+training and testing effect there for their accuracy, because the sample data taken
+from the distribution does not perfectly resembles the Normal distribution. So, 
+Transforming the data is one of the best way to get the good results, after
+getting the bell curve of that dataset.
