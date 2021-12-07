@@ -1,0 +1,493 @@
+---
+title: "Project Feedback"
+author: "Priyank Thakkar"
+date: "18/11/2021"
+output: word_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## INTRODUCTION
+
+This data set is all about the students who graduate from the Universities of USA. I am curious to know that does your Major in your study matter or not for your economic success. What is the general trend right now. And, what are the steps we can take before selecting the Major to boost your odds for the same. And mostly what is the share of the women in the different categories. 
+
+## DATA 
+
+This data is from the GitHub repository, from Fivethirtyeight.com.  All data is from American Community Survey 2010-2012 Public Use Micro data series. All Three files in the repository contains basic earnings and labor force information. “recent-grads.csv” contains a more detailed breakdown, including by sex and by the type of job they got. “grad-students.csv” contains details on graduate school attendees. 
+Here, we have used the data from the file of “recent-grades.csv”. And here is the bifurcation of all the Headers and their Descriptions. Our data contains 174x21 size of entries.
+
+Where, we can see that 174 are rows, they represent distinct 174 majors, from all Major Categories available in the data. Moreover, all 21 columns and their representation are below.
+
+**Header**		          **Description** 
+Rank:                   Rank by median earnings
+Major_code:             Major code
+Major:                  Major description
+Major_category:         Category of major 
+Total:                  Total number of people with major
+Sample_size:            Sample size (unweighted) of full-time, year-round ONLY 
+Men:                    Male graduates
+Women:                  Female graduates
+ShareWomen:             Women as share of total
+Employed:               Number employed
+Full_time:              Employed 35 hours or more
+Part_time:              Employed less than 35 hours
+Full_time_year_round:   Employed at least 50 weeks and at least 35 hours
+Unemployed:             Number unemployed 
+Unemployment_rate:      Unemployed / (Unemployed + Employed)
+Median:                 Median earnings of full-time, year-round workers (Normalized)
+P25th:                  25th percentile of earnings
+P75th:                  75th percentile of earnings
+College_jobs:           Number with job requiring a college degree
+Non_college_jobs:       Number with job not requiring a college degree
+Low_wage_Jobs:          Number in low-wage service jobs
+
+
+
+For our variable study, we may need all the variables later on for more explorations. But, here are few of the variables that we can focus on for PCA and EDA. 
+ - Total, Men, Women
+ - ShareWomen
+ - Mean 
+ - Employed
+ - Unemployed
+ - Unemployment_rate
+ - College_jobs
+ - Non_college_jobs
+ - Low_wage_jobs
+
+ 
+## Principal Components Analysis
+ 
+Step 1 : Load the libraries and Data
+
+```{r library and data}
+library(tidyverse)
+
+setwd("D:\\SJSU_HW\\GitHubSJSU\\RStudio_Learning\\Data_set")
+data_grade <- read.csv("recent_grads.csv")
+recent_grade <- as_tibble(data_grade)
+is_tibble(recent_grade)
+
+```
+Step 2 : Remove Missing values and create with our Variables.
+
+For PCA we are taking only 8 variables. We, choose these variables because we want to predict that what will the Mean salary looks like for any Major category. And these variables helps us to predict such.
+  - Total
+  - Employed
+  - Full_time
+  - Unemployed
+  - Median
+  - College_jobs
+  - Non_college_jobs
+  - Low_wage_jobs
+  - Major_category
+  
+```{r Missing Value}
+# Check if any NA values
+recent_grade %>% summarise(Total_Count = n())
+filter(recent_grade, is.na(Total) | is.na(Men) | is.na(Women) | is.na(ShareWomen)) %>%
+  summarise(Missing_Count = n())
+
+# Drop the NA 
+new_recent_grade <- drop_na(recent_grade)
+
+# Generate our new Data only from the variables that are in need.
+batch <- select(new_recent_grade,
+                Median,
+                Total, 
+                Employed,
+                Full_time,
+                Unemployed,
+                College_jobs,
+                Non_college_jobs,
+                Low_wage_jobs)
+is_tibble(batch)
+
+#check for all the variables, they should be numeric for PCA calculation.
+#str(batch)
+```
+Step 3 : Calculate Cumulative Percent Variance.
+
+  - Calculate Correlation matrix.
+  - Calculate Scaled Covariance for later use of Principal component score.
+  - Get Eigen Values and Vectors from Correlation matrix.
+  - For Percent Variance apply below formula.
+
+  * $Percent Variance = EigenValues/sum(EigenValues)$
+
+
+```{r cov }
+# Calculate the Correlation 
+cor <- cor(batch)
+
+# Calculate the Scaled Covariance = correlation
+scaled <- scale(batch)
+ScaleCov <- cov(scaled)
+ScaleCov
+```
+
+```{r Eigen values as corelation}
+eigenCor<-  eigen(cor)
+eigenCor
+```
+Now, we will calculate the Percent Variance, and that will give us the information about, what proportion of total variance is explained by the First, second and till the end of principal component. 
+
+We can calculate Cumulative percent variance just to see that how many columns represents major portion of the data information.
+
+```{r PVE}
+# Percent Variance
+PV <- eigenCor$values/sum(eigenCor$values)
+PV
+
+# Cumulative Percent Variance
+cumsum(PV)
+```
+
+Now, using the Graphs we will can see that how many variables we need to represent the data and what are the variables we can reduce. 
+
+```{r plots for Grades_students}
+SwCorPlot <- qplot(c(1:8),PV) +
+  geom_line()+
+  geom_point(shape = 20,colour = "red", fill = NA , size = 2, stroke = 1 ) +
+  xlab("Principal Component") +
+  ylab("Percent Variace") +
+  ggtitle("Correlation Plot of Grad Students") +
+  scale_y_continuous(labels = scales::percent)+
+  theme(plot.title = element_text(size = rel(2))) +
+  theme(panel.grid.major = element_line(colour = "black")) +
+  theme(panel.border = element_rect(linetype = "dashed", fill = NA)) +
+  theme(axis.ticks = element_line(size = 2)) +
+  
+  theme(
+    axis.ticks.length.y = unit(.25, "cm"),
+    axis.ticks.length.x = unit(-.25, "cm"),
+    axis.text.x = element_text(margin = margin(t = .3, unit = "cm"))
+  ) 
+SwCorPlot
+
+SwCumCorPlot <- qplot(c(1:8),cumsum(PV)) +
+  geom_line()+
+  geom_point(shape = 20,colour = "red", fill = NA , size = 2, stroke = 1 ) +
+  xlab("Principal Component") +
+  ylab("Percent Variace") +
+  ggtitle("Cumulative Correlation Plot of Grad Students") +
+  scale_y_continuous(labels = scales::percent) +
+  theme(plot.title = element_text(size = rel(2))) +
+  theme(panel.grid.major = element_line(colour = "black")) +
+  theme(panel.border = element_rect(linetype = "dashed", fill = NA)) +
+  theme(axis.ticks = element_line(size = 2)) +
+  
+  theme(
+    axis.ticks.length.y = unit(.25, "cm"),
+    axis.ticks.length.x = unit(-.25, "cm"),
+    axis.text.x = element_text(margin = margin(t = .3, unit = "cm"))
+  ) 
+SwCumCorPlot
+```
+Now, We will count the Principal Components Score. 
+
+The sample principal components are defined as those linear combinations which have maximum sample variance. If we project the 172 data points onto the first eigen vectors, the projected values are called the first principal component.
+
+From above graph, we can say that. 1st component contains 76% data, 2nd component contains 93% and if we include 3rd component the total data will be 99%. So no need to add more component, they have very negligent data available which does not bother us. 
+
+```{r PC for grad student}
+selectedEigenValues <- eigenCor$vectors[,1:3]
+colnames(selectedEigenValues) = c("PC1", "PC2", "PC3")
+row.names(selectedEigenValues) = colnames(batch)
+selectedEigenValues
+
+```
+```{r Principal componenet scores for batch data}
+# Principal component scores for batch data
+PC1 <- as.matrix(scaled) %*% selectedEigenValues[,1]
+PC2 <- as.matrix(scaled) %*% selectedEigenValues[,2]
+PC3 <- as.matrix(scaled) %*% selectedEigenValues[,3]
+
+# get it into one data frame and see the head
+PC <- data.frame(PC1,PC2,PC3)
+head(PC)
+```
+Step 4 : Visualization of the PC
+
+We, have selected three principal components so lets visualize them. 
+  1. Visualize PC1, PC2 and PC3 together.
+  2. Visualize PC1 and PC2 only.
+
+```{r Visualization of the Principal components selected}
+library(scatterplot3d)
+
+scatterplot3d(PC[,1:3], angle = 75, pch = 16,
+              main = "Grade Student - 3D PCA Graph",
+              xlab = "PCA 1",
+              ylab = "PCA 2",
+              zlab = "PCA 3",
+              color = "Blue",
+              type = "h"
+              )
+```
+```{r scatter plot}
+ggplot(PC, aes(PC1,PC2))+
+  modelr::geom_ref_line(h=0) +
+  modelr::geom_ref_line(v=0) +
+  geom_text(aes(label = grade_student),size =3) +
+  xlab("PCA 1") +
+  ylab("PCA 2") +
+  ggtitle("Grade Student - PCA Graph")
+```
+
+Now, get Visualization of the PC1 and PC2, from the inbuilt function who counts the PC. And show the vectors on the map.
+
+```{r PCA from function}
+results <- prcomp(batch, scale = TRUE)
+results
+```
+```{r biplot 2}
+biplot(results, scale = 0,  expand=1, xlim=c(-4.0, 2.0), ylim=c(-5.0, 2.0))
+```
+
+###################################
+
+```{r corrplot_dist, exercise=TRUE}
+library(corrplot)
+cor(batch)
+corrplot.mixed(cor(batch[,-1]), order="hclust", tl.col="black")
+```
+```{r vif}
+library(car)
+temp <- PC
+temp = cbind(temp,Salary = batch$Median)
+#head(temp)
+modelPC <- lm(Salary ~ .,data=temp)
+summary(modelPC)
+```
+```{r plot model}
+plot(modelPC)
+```
+```{r predict}
+predict(modelPC, se.fit = TRUE)
+```
+
+```{r vif}
+library(car)
+model1 <- lm(Median~Total+
+               Employed+
+               Full_time+
+               Unemployed+
+               College_jobs+
+               Non_college_jobs+
+               Low_wage_jobs,
+               data=batch)
+summary(model1)
+```
+## Residual Analysis (AIC)
+
+```{r stepwise}
+# stepAIC(model1, direction = "both")
+# link of reference : https://ashutoshtr.medium.com/what-is-stepaic-in-r-a65b71c9eeba
+
+model2 <- step(model1)
+summary(model2)
+```
+
+```{r visualizing vif vlaues}
+vif(model1)
+
+#create vector of VIF values
+vif_values <- vif(model1)
+
+#create horizontal bar chart to display each VIF value
+barplot(vif_values, main = "VIF Values", horiz = TRUE, col = "steelblue")
+
+#add vertical line at 5
+abline(v = 5, lwd = 3, lty = 2)
+```
+
+## Check the Histogram
+
+```{r check skewness}
+library(moments)
+skewness(batch$Median, na.rm = TRUE)
+```
+
+```{r make it normalized}
+library(ggpubr)
+
+# Distribution of Median variable
+ggdensity(batch, x = "Median", fill = "lightgray", title = "Median Salary") +
+  stat_overlay_normal_density(color = "red", linetype = "dashed")
+
+Fertility <- ggplot(data = batch, aes(sample = Median))
+
+Fertility + 
+  stat_qq(distribution = stats::qnorm) + stat_qq_line() +
+  labs(y = 'sample quantiles', x = 'theoretical quantiles') + 
+  theme(text = element_text(size = 16))
+```
+
+```{r make it transform}
+batch$Median = log10(batch$Median)
+
+# Log Distribution of Median variable
+ggdensity(batch, x = "Median", fill = "lightgray", title = "Median Salary") +
+  stat_overlay_normal_density(color = "red", linetype = "dashed")
+```
+
+```{r check skewness agian}
+skewness(batch$Median, na.rm = TRUE)
+```
+
+##############################################
+
+## Principal Components Regression
+
+Given a set of p predictor variables and a response variable, multiple linear regression uses a method known as least squares to minimize the sum of squared residuals (RSS):
+
+  * $RSS = Σ(y_i -  ŷ_i)^2$
+  
+  Where : 
+  
+    Σ: A greek symbol that means sum
+    yi: The actual response value for the ith observation
+    ŷi: The predicted response value based on the multiple linear regression model
+
+However, when the predictor variables are highly correlated then multicollinearity can become a problem. This can cause the coefficient estimates of the model to be unreliable and have high variance.
+
+One way to avoid this problem is to instead use principal components regression, which finds M linear combinations (known as “principal components”) of the original p predictors and then uses least squares to fit a linear regression model using the principal components as predictors.
+
+# Step 1 : Load Necessary Packages
+
+The set.seed() function sets the starting number used to generate a sequence of random numbers – it ensures that you get the same result if you start with that same seed each time you run the same process.
+
+```{r seed}
+# load the package
+library(pls)
+
+#make this example reproducible
+set.seed(10)
+```
+
+Step 3: Fit PCR Model
+
+By using PCR you can easily perform dimensionality reduction on a high dimensional dataset and then fit a linear regression model to a smaller set of variables, while at the same time keep most of the variability of the original predictors.
+
+we’ll fit a principal components regression (PCR) model using Median as the response variable and the following variables as the predictor variables.
+
+
+    * scale=TRUE: This tells R that each of the predictor variables should be scaled to have a mean of 0 and a standard deviation of 1. This ensures that no predictor variable is overly influential in the model if it happens to be measured in different units.
+    * validation=”CV”: This tells R to use k-fold cross-validation to evaluate the performance of the model. Note that this uses k=10 folds by default.
+
+```{r model}
+model <- pcr(Median~Total+
+               Employed+
+               Full_time+
+               Unemployed+
+               College_jobs+
+               Non_college_jobs+
+               Low_wage_jobs,
+               data=batch,
+               scale=TRUE,
+               validation="CV")
+```
+
+Step 3: Choose the Number of Principal Components
+
+Even though we have choose the Principal Components from the previous method with the help of cumulative percent variance. We wanted to check it again with the model we just created. So, if there any confusion it will clarify it up for us.
+
+```{r summary of model}
+#view summary of model fitting
+summary(model)
+```
+There are two tables of interest in the output:
+
+1. VALIDATION: RMSEP
+
+This table tells us the test RMSE calculated by the k-fold cross validation. We can see the following:
+
+    If we only use the intercept term in the model, the test RMSE is 11495.
+    If we add in the first principal component, the test RMSE drops to 11427.
+    If we add in the second principal component, the test RMSE increase to 11433.
+
+We can see that adding additional principal components actually leads to an increase in test RMSE. Thus, it appears that it would be optimal to only use two principal components in the final model.
+
+2. TRAINING: % variance explained
+
+This table tells us the percentage of the variance in the response variable explained by the principal components. We can see the following:
+
+    By using just the first principal component, we can explain 92.05% of the variation in the response variable.
+    By adding in the second principal component, we can explain 99.05% of the variation in the response variable.
+
+Note that we’ll always be able to explain more variance by using more principal components, but we can see that adding in more than two principal components doesn’t actually increase the percentage of explained variance by much.
+
+We can also visualize the test RMSE (along with the test MSE and R-squared) based on the number of principal components by using the validationplot() function. 
+
+```{r model visualization }
+#visualize cross-validation plots
+validationplot(model)
+validationplot(model, val.type="MSEP")
+validationplot(model, val.type="R2")
+```
+In each plot we can see that the model fit improves by adding in two principal components, yet it tends to get worse when we add more principal components.
+
+Thus, the optimal model includes just the first two principal components.
+
+```{r pcr prediction plot}
+predplot(model) 
+coefplot(model)
+```
+
+Step 4: Use the Final Model to Make Predictions
+
+We can use the final PCR model with two principal components to make predictions on new observations.
+
+The following code shows how to split the original dataset into a training and testing set and use the PCR model with two principal components to make predictions on the testing set.
+
+NOTE : Choose the number or **ncomp** as the number we selected for Principal components, at the time to predict the model, after training.
+
+```{r train model}
+#define training and testing sets
+train <- batch[1:130,c("Median","Total","Employed","Full_time","Unemployed","College_jobs", "Non_college_jobs", "Low_wage_jobs")]
+y_test <- batch[131:nrow(batch), c("Median")]
+test <- batch[131:nrow(batch),c("Total","Employed","Full_time","Unemployed","College_jobs","Non_college_jobs", "Low_wage_jobs")]
+```
+
+
+```{r prediction}
+#use model to make predictions on a test set
+model <-pcr(Median~Total+
+               Employed+
+               Full_time+
+               Unemployed+
+               College_jobs+
+               Non_college_jobs+
+               Low_wage_jobs,
+               data=train, 
+               scale=TRUE,
+               validation="CV")
+pcr_pred <- predict(model, test, ncomp=3, se.fit = TRUE)
+pcr_pred
+```
+
+```{r RMSE}
+#calculate RMSE
+sq = (pcr_pred - y_test)^2 
+sqrt(mean(sq$Median)) 
+
+```
+Now, let's try to predict the value of the Median Income of some Major categories for which values look like below. It will predict the values from the train model and no of principal component as we selected before.
+
+```{r predict data frame}
+nd = with(train, data.frame(Total=2000,
+                            Employed=1976,
+                            Full_time=1800,
+                            Unemployed=37, 
+                            College_jobs=1534,
+                            Non_college_jobs=150,
+                            Low_wage_jobs=53))
+nd$pred = predict(model, newdata=nd, type="response", ncomp=3)
+nd
+```
+
+Thank you for Reading. Let me know Professor if i am wrong somewhere, or have to add something in the report specifically. 
+
